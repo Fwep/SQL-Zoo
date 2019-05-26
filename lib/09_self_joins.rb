@@ -202,13 +202,16 @@ def start_at_craiglockhart
   # as well as the company and bus no. of the relevant service.
   execute(<<-SQL)
     SELECT
-      end_stops.name, routes.company, routes.num
+      end_stops.name, end_routes.company, end_routes.num
     FROM
-      stops AS start_stops
+      routes AS start_routes
     JOIN
-      stops AS end_stops ON start_stops.id = end_stops.id
+      routes AS end_routes ON start_routes.company = end_routes.company
+      AND start_routes.num = end_routes.num
     JOIN
-      routes ON end_stops.id = routes.stop_id
+      stops AS start_stops ON start_stops.id = start_routes.stop_id
+    JOIN
+      stops AS end_stops ON end_stops.id = end_routes.stop_id
     WHERE
       start_stops.name = 'Craiglockhart'
   SQL
@@ -219,5 +222,30 @@ def craiglockhart_to_sighthill
   # Sighthill. Show the bus no. and company for the first bus, the name of the
   # stop for the transfer, and the bus no. and company for the second bus.
   execute(<<-SQL)
+    SELECT DISTINCT
+      start.num,
+      start.company,
+      transfer.name,
+      finish.num,
+      finish.company
+    FROM
+      routes start
+    JOIN
+      routes AS to_transfer ON start.company = to_transfer.company
+        AND start.num = to_transfer.num
+    JOIN
+      stops AS transfer ON to_transfer.stop_id = transfer.id
+    JOIN
+      routes AS from_transfer ON transfer.id = from_transfer.stop_id
+    JOIN
+      routes AS finish ON from_transfer.company = finish.company
+        AND from_transfer.num = finish.num
+    JOIN
+      stops AS origin_stops ON start.stop_id = origin_stops.id
+    JOIN
+      stops AS destination_stops ON finish.stop_id = destination_stops.id
+    WHERE
+      origin_stops.name = 'Craiglockhart'
+        AND destination_stops.name = 'Sighthill'
   SQL
 end
